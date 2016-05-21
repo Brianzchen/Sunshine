@@ -1,6 +1,7 @@
 package com.example.android.sunshine.app;
 
 import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.support.v4.app.Fragment;
@@ -62,7 +63,7 @@ public class ForecastFragment extends Fragment {
         if (id == R.id.action_refresh) {
             FetchWeatherTask task = new FetchWeatherTask();
             task.execute("2193734"); // Auckland
-            //task.execute("2147714"); // Sydney
+            //task.execute("2147714"); // Sydney\
         }
         return super.onOptionsItemSelected(item);
     }
@@ -82,7 +83,12 @@ public class ForecastFragment extends Fragment {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
                 String forecast = mForecastAdapter.getItem(position);
-                Toast.makeText(getActivity(), forecast, Toast.LENGTH_SHORT).show();
+
+                Intent detailIntent = new Intent(getActivity(), DetailActivity.class);
+                detailIntent.putExtra(Intent.EXTRA_TEXT, forecast);
+                startActivity(detailIntent);
+
+                //Toast.makeText(getActivity(), forecast, Toast.LENGTH_SHORT).show();
             }
         });
 
