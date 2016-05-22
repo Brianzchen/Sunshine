@@ -2,8 +2,10 @@ package com.example.android.sunshine.app;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.text.format.Time;
@@ -61,9 +63,8 @@ public class ForecastFragment extends Fragment {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
         if (id == R.id.action_refresh) {
-            FetchWeatherTask task = new FetchWeatherTask();
-            task.execute("2193734"); // Auckland
-            //task.execute("2147714"); // Sydney\
+            updateWeather();
+            return true;
         }
         return super.onOptionsItemSelected(item);
     }
@@ -72,11 +73,6 @@ public class ForecastFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
-
-        FetchWeatherTask task = new FetchWeatherTask();
-        task.execute("2193734"); // Auckland
-        //task.execute("2147714"); // Sydney
-
         listView = (ListView) rootView.findViewById(R.id.listview_forecast);
 
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -95,6 +91,22 @@ public class ForecastFragment extends Fragment {
         return rootView;
     }
 
+    @Override
+    public void onStart() {
+        super.onStart();
+        updateWeather();
+    }
+
+    private void updateWeather() {
+        FetchWeatherTask task = new FetchWeatherTask();
+        //task.execute("2193734"); // Auckland
+        //task.execute("2147714"); // Sydney\
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        String location = pref.getString(getString(R.string.pref_location_key), getString(R.string.pref_location_default));
+
+        task.execute(location);
+    }
+
     public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
 
         private final String LOG_TAG = FetchWeatherTask.class.getSimpleName();
@@ -105,7 +117,7 @@ public class ForecastFragment extends Fragment {
             // so that they can be closed in the finally block.
             HttpURLConnection urlConnection = null;
             BufferedReader reader = null;
-            int numDays = 7;
+            int numDays = 16;
 
             // Will contain the raw JSON response as a string.
             String forecastJsonStr;
@@ -115,6 +127,7 @@ public class ForecastFragment extends Fragment {
                 final String FORECAST_BASE_URL = "http://api.openweathermap.org/data/2.5/forecast/daily?";
                 final String API_PARAM = "APPID";
                 final String ID_PARAM = "id";
+                final String CITY_PARAM="q";
                 final String DAYS_PARAM = "cnt";
                 final String UNIT_PARAM = "units";
                 final String METRIC_UNIT = "metric";
@@ -124,7 +137,7 @@ public class ForecastFragment extends Fragment {
                 // http://openweathermap.org/API#forecast
 
                 Uri builtUri = Uri.parse(FORECAST_BASE_URL).buildUpon()
-                        .appendQueryParameter(ID_PARAM, params[0])
+                        .appendQueryParameter(CITY_PARAM, params[0])
                         .appendQueryParameter(DAYS_PARAM, Integer.toString(numDays))
                         .appendQueryParameter(UNIT_PARAM, METRIC_UNIT)
                         .appendQueryParameter(API_PARAM, API_KEY)
@@ -213,6 +226,14 @@ public class ForecastFragment extends Fragment {
          * Prepare the weather high/lows for presentation.
          */
         private String formatHighLows(double high, double low) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
+            String unitType = prefs.getString(getString(R.string.pref_temperature_unit_key), getString(R.string.pref_temperature_unit_default));
+
+            if (unitType.equals("imperial")) {
+                high = (high * 1.8) + 32;
+                low = (low * 1.8) + 32;
+            }
+
             // For presentation, assume the user doesn't care about tenths of a degree.
             long roundedHigh = Math.round(high);
             long roundedLow = Math.round(low);
